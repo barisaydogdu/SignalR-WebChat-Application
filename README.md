@@ -1,12 +1,12 @@
 # Real-Time Web Chat Application with SignalR in Blazor (ASP.NET Core 6)
 
-**Description:
+##Description:
 This is a real-time web chat application developed using Blazor Web Assembly templates in ASP.NET Core 6. With this application, users can engage in group conversations and have collective discussions.
 This project is currently being developed solely by me. I am actively working on adding more features and improvements. I also value user feedback and am dedicated to making the project more functional. Therefore, please don't forget to visit this repository regularly and stay tuned for the latest updates!
 
-**Key Features:
+##Key Features:
 
-*Real-time chat functionality powered by SignalR.
+###Real-time chat functionality powered by SignalR.
 *Group chat rooms for seamless communication.
 *User authentication and authorization.
 *User-friendly interface with an intuitive design.
