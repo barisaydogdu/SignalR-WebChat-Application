@@ -1,0 +1,240 @@
+﻿@page "/counter"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+@inject NavigationManager NavigationManager;
+@inject AuthenticationStateProvider AuthenticationStateProvider;
+@inject IJSRuntime JSRuntime;
+@inject IAccessTokenProvider TokenProvider
+@implements IAsyncDisposable
+
+<PageTitle>SignalR Chat</PageTitle>
+<h3>Merhaba, @userName</h3>
+@if (!IsConnected)
+{
+    <div class="input-group">
+        <h3>Merhaba, @userName</h3>
+         @* <input @bind="username" class="form-control" placeholder="What is your name?"> *@ 
+        <button class="btn btn-primary form-control-append" @onclick="Connect"> Connect</button>
+        <button class="btn btn-danger form-control-append" @onclick="ConnectToUserMessage"> Connect To User Message</button>
+
+    </div>
+}
+else
+{
+    @foreach (var group in _groups)
+    {
+        <button class="btn btn-primary" @onclick="() => JoinGroup(group)">@group</button>
+    }
+    <h1>Current GroupName : @groupName</h1>
+    @* <button class="btn btn-danger">Programming Group</button> *@
+    <textarea style="width:100%;height:500px;" @ref="TextAreaRef">
+        @messages
+      </textarea>
+
+      <div class="input-group">
+
+       
+          <input @bind-value="message"
+          @bind-value:event="oninput"
+          @onkeyup="HandleInput"
+          class="form-control">
+         
+          <input @bind="groupName" @onkeyup="HandleInput">
+          <button class="btn btn-primary form-group-append"
+          @onclick="Send"
+          disabled="@(!IsConnected)">
+          Send
+          </button>
+ 
+        <button class="btn btn-warning form-group-append"
+        @onclick="JoinGroup"
+                disabled="@(!IsConnected)">
+            Join Group
+        </button> 
+        <button class="btn btn-danger form-group-append"
+        @onclick="LeaveGroup" disabled="@(!IsConnected)">Leave Group</button>
+
+      </div>    
+}
+@code
+{
+    private string userName;
+    private HubConnection? hubConnection;
+    private string messages=string.Empty;
+    private string messages2=string.Empty;
+    private string groupName="";
+    private string groupName2="Default Group";
+    private string userId = "test3@gmail.com";
+    //Gruplar için liste oluşturuldu
+    private List<string> _groups = new List<string>() { "Grup1", "Grup2", "Grup3" };
+    //private string username=string.Empty;
+    private string message= string.Empty;
+    private string message2= string.Empty;
+    ElementReference TextAreaRef;
+    ElementReference TextAreaRef2;
+
+    private async Task Connect()
+    {
+        hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))
+         .WithAutomaticReconnect() //bunu sonradan ekledim.
+        .Build();
+
+        hubConnection.On<string, string>("ReceiveMessageToGroup", (user, message) =>
+        {
+            var msg = $"{(string.IsNullOrEmpty(user) ? "" : user + ":")} {message}";
+            messages += msg + "\n";
+            JSRuntime.InvokeVoidAsync("scrollToBottom",TextAreaRef);
+            StateHasChanged();
+        });        
+
+        await hubConnection.StartAsync();
+    }
+
+
+    // private async Task ConnectToUserMessage()
+    // {
+    //     hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))
+    //     .WithAutomaticReconnect()
+    //     .Build();
+
+    //     hubConnection.On<string, string, DateTime>("SendMessageToUser", (user, message, time) =>
+    //     {
+    //         var msg = $"{(string.IsNullOrEmpty(user) ? "" : user + ":")} {message}- {time:HH:mm}";
+    //         messages += msg + "\n";
+    //         JSRuntime.InvokeVoidAsync("scrollToBottom", TextAreaRef);
+    //         StateHasChanged();
+    //     });
+
+    //     await hubConnection.StartAsync();
+    // }
+
+
+    private async Task ConnectToUserMessage()
+    {
+        hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))           
+        .WithAutomaticReconnect()
+        .Build();
+        hubConnection.On<string, string, DateTime>("GetThatMessageDude", (user, message, time) =>
+     {
+         try
+         {
+             var msg = $"{(string.IsNullOrEmpty(user) ? "" : user + ":")} {message}- {time:HH:mm}";
+             messages += msg + "\n";
+             JSRuntime.InvokeVoidAsync("scrollToBottom", TextAreaRef);
+             StateHasChanged();
+         }
+         catch(Exception e)
+         {
+             Console.WriteLine("Bir hata oluştu" + e);
+         }
+
+     });
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception e)
+        {
+
+            Console.WriteLine("Bir hata oluştu" + e);
+        }
+
+    }
+
+
+    private void SetGroupName(string selectedGroup)
+    {
+        groupName2 = selectedGroup;
+    }
+
+    private  async Task Send()
+    {
+        if (hubConnection !=null)
+        {
+            DateTime currentTime=DateTime.Now;
+            await hubConnection.SendAsync("SendMessageToGroup", groupName, userName, message);
+            message = string.Empty;
+        }
+    }
+
+    private List<string> GetGroups()
+    {
+        return _groups;
+    }
+
+    public void AddGroup(string _groupName)
+    {
+        if (!_groups.Contains(_groupName))
+        {
+            _groups.Add(_groupName);
+        }
+    }
+    private async Task JoinGroup()
+    {
+     //   if (!string.IsNullOrWhiteSpace(groupName))
+       // {
+           // groupName = selectedGroup;
+            await hubConnection.SendAsync("JoinGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+      //  }
+    }
+    private async Task JoinGroup(string selectedGroup)
+    {
+     //   if (!string.IsNullOrWhiteSpace(groupName))
+       // {
+            groupName = selectedGroup;
+            await hubConnection.SendAsync("JoinGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+      //  }
+    }
+    private async Task LeaveGroup()
+    {
+        if (!string.IsNullOrWhiteSpace(groupName))
+        {
+            await hubConnection.SendAsync("LeaveGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+        }
+    }
+
+    private async Task SendMessageToUser()
+    {
+        if (hubConnection !=null)
+        {
+            DateTime currentTime = DateTime.Now;
+
+            await hubConnection.SendAsync("SendMessageToUser", userId, message,userName, currentTime);
+          
+            message = string.Empty;
+        }
+        
+    }
+
+
+    private async Task HandleInput(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Enter"))
+        {
+            await Send();
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection!=null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+
+  
+  
+    protected override async Task OnInitializedAsync()
+    {
+   
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authenticationState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            userName = user.Identity.Name;
+        }
+    }
+}
