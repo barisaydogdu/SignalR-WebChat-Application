@@ -6,11 +6,11 @@ This project is currently being developed solely by me. I am actively working on
 
 # Key Features:
 
- Real-time chat functionality powered by SignalR.
- Group chat rooms for seamless communication.
- User authentication and authorization.
- User-friendly interface with an intuitive design.
-Get Started:
+- Real-time chat functionality powered by SignalR.
+- Group chat rooms for seamless communication.
+- User authentication and authorization.
+- User-friendly interface with an intuitive design.
+**Get Started**:
 To get started with this project, follow these steps:
 
 1-Clone the repository to your local machine.
