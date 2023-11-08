@@ -5,6 +5,7 @@ using WebBlazorChatApplication.Server.Data;
 using WebBlazorChatApplication.Server.Models;
 using Microsoft.AspNetCore.Identity;
 using WebBlazorChatApplication.Server.Hubs;
+using static WebBlazorChatApplication.Shared.SharedServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,10 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+builder.Services.AddDbContext<ChatDbContext>(options => options.UseSqlServer(
+    builder.Configuration.GetConnectionString("BlazorWebApplicatonString")));
+
+builder.Services.AddScoped<ChatService>();
 builder.Services.AddIdentityServer()
     .AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
 

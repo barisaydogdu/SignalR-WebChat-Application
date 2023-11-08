@@ -1,0 +1,415 @@
+﻿@page "/groupchat"
+@using static WebBlazorChatApplication.Shared.SharedModels;
+
+
+
+@inject NavigationManager NavigationManager;
+@inject AuthenticationStateProvider AuthenticationStateProvider;
+@inject IJSRuntime JSRuntime;
+@inject IServiceProvider serviceProvider
+@inject ChatService chatService
+
+
+
+<link rel="stylesheet" href="css/groupChatStyle.css" />
+
+@if (!IsConnected)
+{
+    <div class="input-group">
+        <h3>Merhaba, @userName</h3>
+        @* <input @bind="username" class="form-control" placeholder="What is your name?"> *@
+        <button class="btn btn-primary form-control-append" @onclick="Connect">Connect and Join Chat</button>
+    </div>
+}
+else
+{
+
+    @foreach (var group in _groups)
+    {
+        <button class="btn btn-primary" @onclick="() => JoinGroup(group)">@group</button>
+    }
+    <h1>Current GroupName : @groupName</h1>
+
+    <ul>
+        @foreach (var message in messages)
+        {
+            <li>@message.User: @message.Text</li>
+        }
+    </ul>
+
+    <button class="btn btn-warning" @onclick="Disconnect">Disconnect</button>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+
+    <div class="container">
+        <div class="row clearfix">
+            <div class="col-lg-12">
+                <div class="card chat-app">
+                    <div id="plist" class="people-list">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" placeholder="Search...">
+                        </div>
+                        <ul class="list-unstyled chat-list mt-2 mb-0">
+                            @foreach (var user in onlineUsers)
+                            {
+
+                                <li class="clearfix">
+                                    <img src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="avatar">
+                                    <div class="about">
+                                        <div class="name">@user.Key</div>
+                                        <div class="status">
+                                            <i class="fa fa-circle online"></i> Last Seen: @user.Value.LastActivity
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="chat">
+                        <div class="chat-header clearfix">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <a href="javascript:void(0);" data-toggle="modal" data-target="#view_info">
+                                        <img src="https://bootdey.com/img/Content/avatar/avatar2.png" alt="avatar">
+                                    </a>
+                                    @*     <div class="chat-about">
+                                @foreach (var user in onlineUsers)
+                                {
+                                <h6 class="m-b-0">@user.Key</h6>
+                                <small>Last seen:</small>
+                                <small>
+                                @user.Value.LastActivity
+                                </small>
+                                }
+                                </div> *@
+                                    @if (onlineUsers.ContainsKey(userName))
+                                    {
+                                        var user = onlineUsers[userName];
+                                        <div class="chat-about">
+                                            <h6 class="m-b-0">@userName</h6>
+                                            <small>Last seen: @user.LastActivity</small>
+                                        </div>
+                                    }
+
+                                </div>
+                                <div class="col-lg-6 hidden-sm text-right">
+                                    <a href="javascript:void(0);" class="btn btn-outline-secondary"><i class="fa fa-camera"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-primary"><i class="fa fa-image"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-info"><i class="fa fa-cogs"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-warning"><i class="fa fa-question"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-history">
+                            <ul class="m-b-0">
+                                <li class="clearfix">
+                                    <div class="message-data text-right">
+                                        <span class="message-data-time">10:10 AM, Today</span>
+                                        <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="avatar">
+                                    </div>
+                                    <div class="message other-message float-right"> @messages </div>
+                                </li>
+                                <li class="clearfix">
+                                    <div class="message-data">
+                                        <span class="message-data-time">10:12 AM, Today</span>
+                                    </div>
+                                    <div class="message my-message">Are we meeting today?</div>
+                                </li>
+                                <li class="clearfix">
+                                    <div class="message-data">
+                                        <span class="message-data-time">10:15 AM, Today</span>
+                                    </div>
+                                    <div class="message my-message">Project has been already finished and I have results to show you.</div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="chat-message clearfix">
+                            <div class="input-group mb-0">
+                                <div class="input-group-prepend">
+                                    @* <span class="input-group-text"><i class="fa fa-send"></i></span> *@
+                                    <button disabled="@(!IsConnected)" @onclick="Send" class="btn btn-primary form-group-append">Send</button>
+                                    <button class="btn btn-warning form-group-append"
+                                    @onclick="JoinGroup"
+                                            disabled="@(!IsConnected)">
+                                        Join Group
+                                    </button>
+                                    <button class="btn btn-danger form-group-append"
+                                    @onclick="LeaveGroup" disabled="@(!IsConnected)">
+                                        Leave Group
+                                    </button>
+
+                                </div>
+                            </div>
+                            <input @bind-value="message"
+                            @bind-value:event="oninput"
+                            @onkeyup="HandleInput"
+                                   class="form-control">
+                            <input @bind="groupName" @onkeyup="HandleInput">
+
+                            @* <input @bind="groupName" @onkeyup="HandleInput"  type="text" class="form-control" placeholder="Enter text here..."> *@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+}
+<script src="js/groupChatJS.js"></script>
+
+@code
+{
+    private List<MessageUser> messages;
+    //private ChatService chatService;
+
+    private List<string> connectedUsers = new List<string>();
+    public DateTime LastConnectionTime { get; set; }
+    //private List<(string Username, DateTime LastActivity, DateTime? DisconnectedTime)> onlineUsers = new List<(string, DateTime, DateTime?)>();
+    private Dictionary<string, (string Username, TimeSpan LastActivity, DateTime? miniuteAgo)> onlineUsers = new Dictionary<string, (string, TimeSpan, DateTime?)>();
+
+    // private Dictionary<string, (string Username, DateTime LastActivity, DateTime? DisconnectedTime)> onlineUsers = new Dictionary<string, (string, DateTime, DateTime?)>();
+    private string userName;
+    private HubConnection? hubConnection;
+    //private string messages = string.Empty;
+    private string message = "";
+
+  //  private List<string> messages = new List<string>();
+
+    private string messages2 = string.Empty;
+    private string groupName = "";
+    private string groupName2 = "Default Group";
+    private string userId = "test3@gmail.com";
+    //Gruplar için liste oluşturuldu
+    private List<string> _groups = new List<string>() { "Grup1", "Grup2", "Grup3" };
+    //private string username=string.Empty;
+    //private string message = string.Empty;
+
+
+    private string message2 = string.Empty;
+    ElementReference TextAreaRef;
+    ElementReference TextAreaRef2;
+
+    private async Task Connect()
+    {
+        hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))
+         .WithAutomaticReconnect() //bunu sonradan ekledim.
+        .Build();
+
+        hubConnection.On<string, string>("ReceiveMessageToGroup", (user, message) =>
+        {
+            //messages.Add($"{user}: {message}");
+
+            //  var msg = $"{(string.IsNullOrEmpty(user) ? "" : user + ":")} {message}";
+            // messages += msg + "\n";
+            JSRuntime.InvokeVoidAsync("scrollToBottom", TextAreaRef);
+            StateHasChanged();
+        });
+
+
+
+        hubConnection.On<string>("UserConnected", (username) =>
+        {
+            connectedUsers.Add(username);
+
+            LastConnectionTime = DateTime.Now;
+            TimeSpan lastConnectionTimewithHour = new TimeSpan(LastConnectionTime.Hour, LastConnectionTime.Minute, 0);
+            onlineUsers[username] = (username, lastConnectionTimewithHour, null);
+
+            StateHasChanged();
+        });
+
+
+
+
+        // hubConnection.On<string>("UserDisconnected", (username) =>
+        // {
+        //    // LastConnectionTime = DateTime.Now;
+        //  //   GetTimeSinceLastActive(LastConnectionTime);
+        //     connectedUsers.Remove(username);
+        //     StateHasChanged();
+        // });
+
+
+        await hubConnection.StartAsync();
+    }
+
+    public async Task Disconnect()
+    {
+        hubConnection.On<string>("UserDisconnected", (username) =>
+        {
+            LastConnectionTime = DateTime.Now;
+            TimeSpan lastConnectionTimewithHour = new TimeSpan(LastConnectionTime.Hour, LastConnectionTime.Minute, 0);
+
+            onlineUsers[userName] = (username, lastConnectionTimewithHour, null);
+            GetTimeSinceLastActive(LastConnectionTime);
+            connectedUsers.Remove(username);
+            StateHasChanged();
+        });
+
+        hubConnection.On<Dictionary<string, (string Username, TimeSpan LastActivity, DateTime?)>>("ReceiveUpdatedUsers", (updatedUsers) =>
+        {
+            onlineUsers = updatedUsers;
+            StateHasChanged(); // Blazor bileşenini yeniden çizmek için StateHasChanged kullanın
+        });
+        //  await hubConnection.StopAsync();
+        await hubConnection.DisposeAsync();
+    }
+
+    public async Task TetikleMetodu2()
+    {
+        await hubConnection.SendAsync("ReceiveUpdatedUsers", userName);
+
+    }
+    private async Task DisconnectUser()
+    {
+        await hubConnection.InvokeAsync("ReceiveUpdatedUsers");
+
+    }
+    private string GetTimeSinceLastActive(DateTime lastActive)
+    {
+        var timeSpan = DateTime.Now - lastActive;
+        return $"{timeSpan.Minutes} dakika önce";
+    }
+
+
+
+    private async Task ConnectToUserMessage()
+    {
+        hubConnection = new HubConnectionBuilder().WithUrl(NavigationManager.ToAbsoluteUri($"/chathub?username={userName}"))
+        .WithAutomaticReconnect()
+        .Build();
+        hubConnection.On<string, string, DateTime>("GetThatMessageDude", (user, message, time) =>
+     {
+         try
+         {
+             // var msg = $"{(string.IsNullOrEmpty(user) ? "" : user + ":")} {message}- {time:HH:mm}";
+             // messages += msg + "\n";
+             JSRuntime.InvokeVoidAsync("scrollToBottom", TextAreaRef);
+             StateHasChanged();
+         }
+         catch (Exception e)
+         {
+             Console.WriteLine("Bir hata oluştu" + e);
+         }
+
+     }
+     );
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception e)
+        {
+
+            Console.WriteLine("Bir hata oluştu" + e);
+        }
+
+    }
+
+
+    private void SetGroupName(string selectedGroup)
+    {
+        groupName2 = selectedGroup;
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection != null)
+        {
+            //  var msg = $"{(string.IsNullOrEmpty(userName) ? "" : userName+ ":")} {message}";
+            //  messages += msg + "\n";
+
+            //  messagesList.Add(msg);
+            await hubConnection.SendAsync("SendMessageToGroup", groupName, userName, message);
+
+
+        }
+    }
+
+    private List<string> GetGroups()
+    {
+        return _groups;
+    }
+
+    public void AddGroup(string _groupName)
+    {
+        if (!_groups.Contains(_groupName))
+        {
+            _groups.Add(_groupName);
+        }
+    }
+    private async Task JoinGroup()
+    {
+        //   if (!string.IsNullOrWhiteSpace(groupName))
+        // {
+        // groupName = selectedGroup;
+
+        await hubConnection.SendAsync("JoinGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+                                                               //  }
+    }
+    private async Task JoinGroup(string selectedGroup)
+    {
+        //   if (!string.IsNullOrWhiteSpace(groupName))
+        // {
+        groupName = selectedGroup;
+        await hubConnection.SendAsync("JoinGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+                                                               //  }
+    }
+    private async Task LeaveGroup()
+    {
+        if (!string.IsNullOrWhiteSpace(groupName))
+        {
+            await hubConnection.SendAsync("LeaveGroup", groupName); // Sunucu tarafındaki JoinGroup metodunu çağırın
+        }
+    }
+
+    private async Task SendMessageToUser()
+    {
+        if (hubConnection != null)
+        {
+            DateTime currentTime = DateTime.Now;
+
+            await hubConnection.SendAsync("SendMessageToUser", userId, message, userName, currentTime);
+
+            message = string.Empty;
+        }
+
+    }
+
+
+    private async Task HandleInput(KeyboardEventArgs args)
+    {
+        if (args.Key.Equals("Enter"))
+        {
+            await Send();
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+   
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authenticationState.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            userName = user.Identity.Name;
+            messages = await chatService.GetMessagesAsync();
+
+            
+        }
+    }
+}
